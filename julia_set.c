@@ -2,6 +2,7 @@
 #include "raylib.h"
 #include "limits.h"
 #include <stdint.h>
+#include <math.h>
 
 //Generate random number using built in intel processor 
 //RERAND generator.
@@ -27,31 +28,51 @@ void colorMatrix( int row, int col)
     }
 }
 
-void juliaSet(int imgWidth, int imgHeight){
-    const float cx = 0.7885;
-    const float R = 2;
+void juliaSet(int imgWidth, int imgHeight, float a){
+    
+    const float R = 2.0f;
     const float e = 2.71828;
-    const int pixelSurface = 202500;
+    const float cx = 0.7885 * cos(a);
+    const float cy = 0.7885 * sin(a);
 
-    int rectWidth = 1;
-    int rectHeight = 1;
+    Color color = (Color) {0, 0, 139, 255};
+    
+
     for(int i = 0; i < imgHeight; i++){
         for(int x = 0; x < imgWidth; x++){
-
-            float zx = (x/imgWidth) * (2*R) - R; 
-            float zy = (i/imgWidth) * (2*R) - R;
+            
+            float zx = ((float)(x)/(float)(imgWidth)) * (2.0f*R) - R; 
+            float zy = ((float)(i)/(float)(imgHeight)) * (2.0f*R) - R;
 
             int iteration = 0;
             int max_iteration = 500;
 
             while ((zx * zx) + (zy * zy) < R * R && iteration < max_iteration){
-                
+
+                float temp = (zx*zx) - (zy*zy);
+                zy = 2 * zx * zy + cy;
+                zx = temp + cx;
+
+                iteration++;
             }
+
+            if(iteration == max_iteration){
+                DrawPixel(x, i, color);
+            }else{
+                // Create a gradient based on iteration count
+                unsigned char brightness = (unsigned char)(255 * iteration / max_iteration);
+                Color gradientColor = (Color){
+                    (unsigned char)((color.r * brightness) / 255),
+                    (unsigned char)((color.g * brightness) / 255),
+                    (unsigned char)((color.b * brightness) / 255),
+                    255
+                };
+                DrawPixel(x, i, gradientColor);
+            }
+            
         }
     }
     
-    
-
 }
 
 // z^2 + 0.7885e^ia (0 <= a <= 2pi)
@@ -92,21 +113,30 @@ for each pixel (x, y) on the screen, do:
 
 int main(void)
 { 
-    const int windowHeight = 450;
+    const int windowHeight = 400;
     const int windowWidth = 450;
 
-    InitWindow(windowWidth, windowHeight, "hex colors");
+    InitWindow(windowWidth, windowHeight, "--");
 
-    SetTargetFPS(120);
+    bool hasRendered = false;
+    float range = 0.0f;
+
+    SetTargetFPS(30);
 
     while(!WindowShouldClose()){
 
         BeginDrawing();
 
-            ClearBackground(BLACK);
 
-            //WaitTime(1);
-            colorMatrix(10, 10);
+            
+            ClearBackground(WHITE);
+
+
+            if(range <= 2*PI){
+                juliaSet(windowWidth, windowHeight, range);
+                range += 0.05f;
+            }
+            
 
         EndDrawing();
     
@@ -116,4 +146,4 @@ int main(void)
     return 0; 
 }
 
-//compile with: gcc -march=native -mrdrnd beej.c -o beej ../raylib-master/src/libraylib.a -lm -lpthread -ldl -lrt -lX11
+//compile with: gcc -march=native -mrdrnd julia_set.c -o julia_set ../../raylib-master/src/libraylib.a -lm -lpthread -ldl -lrt -lX11
